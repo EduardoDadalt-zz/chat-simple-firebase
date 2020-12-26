@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "msgs": {
+      "id": {
+        ".read": true,
+        ".write": false,
+        ".indexOn": "date"
+      },
+      ".read": true
+    }
+  }
+}

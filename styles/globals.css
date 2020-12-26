@@ -1,0 +1,38 @@
+html,
+body,
+.fullscreen {
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+:root {
+  --border-radius: 20px;
+}
+.content {
+  word-break: break-all;
+  background-color: gainsboro;
+  border-radius: 0 var(--border-radius) var(--border-radius)
+    var(--border-radius);
+  margin: 0 0.5rem;
+  padding: 0.4rem;
+  max-width: 80%;
+  width: fit-content;
+  border: 0.1px solid black;
+}
+.msg {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.myMsg > .content {
+  background-color: aquamarine;
+  border-radius: var(--border-radius) 0 var(--border-radius)
+    var(--border-radius);
+}
+.myMsg {
+  align-items: flex-end;
+}
+.msg > .name {
+  font-size: 0.9rem;
+}
