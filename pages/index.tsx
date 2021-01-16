@@ -1,95 +1,83 @@
-import axios from "axios";
-import { GetServerSideProps } from "next";
+import firebase from "firebase";
 import Head from "next/head";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useContext, useEffect, useState } from "react";
 import { Button, Form } from "react-bootstrap";
 import Login from "../components/Login";
-import fire from "../config/fire";
+import Msg from "../components/Msg";
+import { db } from "../config/fire";
+import AuthContext from "../context/Auth";
 
 export default function Home() {
-  const [user, setUser] = useState(fire.auth().currentUser);
-  const [loginModalShow, setLoginModalShow] = useState(
-    !fire.auth().currentUser
-  );
-  const [msgs, setMsgs] = useState([]);
+  const { user } = useContext(AuthContext);
   const [content, setContent] = useState("");
-  const handleSubmit = async (e: FormEvent) => {
+  const [msgs, setMsgs] = useState({});
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    try {
+    if (content) {
+      db.add({
+        content,
+        displayName: user?.displayName ?? "???",
+        date: firebase.firestore.FieldValue.serverTimestamp(),
+        uid: user?.uid,
+      });
       setContent("");
-      let token = await fire.auth().currentUser.getIdToken();
-      await axios.post("/api/sendMsg", { token, content });
-    } catch (error) {}
+    }
   };
-  const getMoreMsg = async () => {
-    fire
-      .database()
-      .ref("msgs")
-      .orderByChild("date")
-      .endAt(msgs[0].date - 1)
-      .limitToLast(10)
-      .once("value", (e) => {
-        let obj = e.val();
-        let arr = [];
-        for (const key in obj) {
-          arr.push({ ...obj[key], key });
-        }
-        arr.pop();
-        setMsgs((prevState) => [...arr, ...prevState]);
-      });
-  };
-  const addMsg = (e) => {
-    setMsgs((prevState) => [...prevState, { ...e.val(), key: e.key }]);
-  };
-
   useEffect(() => {
-    fire.auth().onAuthStateChanged((user) => {
-      setLoginModalShow(!user);
-      setUser(user);
-    });
-    fire
-      .database()
-      .ref("msgs")
-      .orderByChild("date")
-      .limitToLast(10)
-      .once("value", (e) => {
-        let obj = e.val();
-        let arr = [];
-        for (const key in obj) {
-          arr.push({ ...obj[key], key });
-        }
-        setMsgs(arr);
+    var sub;
+    if (db) {
+      db.orderBy("date", "asc")
+        .limit(10)
+        .get()
+        .then((querySnapshot) => {
+          querySnapshot.forEach((doc) => {
+            const { uid, ...data } = doc.data();
+            setMsgs((prevState) => ({ ...prevState, [doc.id]: data }));
+          });
+        });
+      sub = db.onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const { uid, ...data } = change.doc.data();
+            setMsgs((prevState) => ({
+              ...prevState,
+              [change.doc.id]: data,
+            }));
+          } else if (change.type === "modified") {
+            const { uid, ...data } = change.doc.data();
+            setMsgs((prevState) => ({ ...prevState, [change.doc.id]: data }));
+          } else if (change.type === "removed") {
+            setMsgs((prevState) => ({
+              ...prevState,
+              [change.doc.id]: undefined,
+            }));
+          }
+        });
       });
-    fire.database().ref("msgs").on("child_added", addMsg);
+    }
     return () => {
-      fire.database().ref("msgs").off("child_added");
+      if (sub) sub();
     };
+  }, [db]);
+  useEffect(() => {
+    console.log();
   }, []);
-  useEffect(() => {}, [msgs]);
   return (
     <>
       <Head>
         <title>Chat</title>
       </Head>
-      <Login show={loginModalShow} onHide={() => {}} />
+      <Login show={!user} onHide={() => {}} />
       <div
         className="fullscreen"
         style={{ display: "grid", gridTemplateRows: "auto min-content" }}
       >
         <div style={{ overflowY: "scroll", overflowX: "hidden" }}>
-          <Button onClick={getMoreMsg}>Ver Mais Mensagens</Button>
-          {msgs.map((e) => (
-            <div
-              key={e.key}
-              className={
-                "msg " +
-                (!!user && user.displayName === e.displayName ? "myMsg" : "")
-              }
-            >
-              <div className="name">{e.displayName}</div>
-              <div className="content">{e.content}</div>
-            </div>
-          ))}
+          <Button onClick={() => {}}>Ver Mais Mensagens</Button>
+          {Object.values(msgs).map(
+            (e, i) =>
+              !!e && <Msg {...e} user={user} key={Object.keys(msgs)[i]} />
+          )}
         </div>
         <Form
           className="p-2 border"
@@ -104,7 +92,7 @@ export default function Home() {
             style={{ flex: 9 }}
             value={content}
             onChange={(e) => {
-              setContent(e.target.value);
+              if (content.length <= 200) setContent(e.target.value);
             }}
             placeholder="Mensagem"
           ></Form.Control>

@@ -1,6 +1,7 @@
 import firebase from "firebase/app";
 import "firebase/auth";
 import "firebase/database";
+import "firebase/firestore";
 const firebaseConfig = {
   apiKey: "AIzaSyB3FWhQqgucf6GCXrV8McC0ytyPuy-9078",
   authDomain: "chat-simple-firebase.firebaseapp.com",
@@ -14,5 +15,8 @@ const firebaseConfig = {
 const fire = !firebase.apps.length
   ? firebase.initializeApp(firebaseConfig)
   : firebase.app();
+
+export const auth = fire.auth();
+export const db = fire.firestore().collection("msgs");
 
 export default fire;
