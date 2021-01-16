@@ -1,6 +1,6 @@
-import "../styles/globals.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { AuthProvider } from "../context/Auth";
+import "../styles/globals.css";
 function MyApp({ Component, pageProps }) {
   return (
     <AuthProvider>
